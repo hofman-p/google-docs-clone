@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import ReactQuill from 'react-quill';
 import 'react-quill/dist/quill.snow.css';
 import { io } from 'socket.io-client';
@@ -17,17 +17,38 @@ const TOOLBAR_MODULES = [
 
 export default function TextEditor() {
   const [text, setText] = useState('');
+  const [socket, setSocket] = useState();
+  const quillRef = useRef();
 
   useEffect(() => {
-    const socket = io('http://localhost:3001');
+    const s = io('http://localhost:3001');
+    setSocket(s);
     return () => {
-      socket.disconnect();
+      s.disconnect();
     }
   }, []);
 
+  useEffect(() => {
+    if (socket == null) return;
+    const handler = delta => {
+      quillRef.current.getEditor().updateContents(delta);
+    }
+    socket.on('received-delta', handler);
+    return () => {
+      socket.off('received-delta', handler);
+    }
+  }, [socket]);
+
+
+  const handleChange = (changes, delta, source, editor) => {
+    setText(changes);
+    if (source !== 'user') return;
+    socket.emit('send-delta', delta);
+  }
+
   return (
     <div>
-      <ReactQuill value={text} onChange={setText} modules={ { toolbar: TOOLBAR_MODULES} }></ReactQuill>
+      <ReactQuill ref={quillRef} value={text} onChange={handleChange} modules={ { toolbar: TOOLBAR_MODULES} }></ReactQuill>
     </div>
   )
 }
