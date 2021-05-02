@@ -1,6 +1,8 @@
 const mongoose = require('mongoose');
 const Document = require('./Document');
 
+const DEFAULT_VALUE = '';
+
 const connectToDb = async () => {
   try {
     await mongoose.connect('mongodb://localhost/google-docs-clone', {
@@ -14,16 +16,12 @@ const connectToDb = async () => {
   }
 }
 
-connectToDb();
-
 const io = require('socket.io')(3001, {
   cors: {
     origin: 'http://localhost:3000',
     methods: ['GET', 'POST']
   }
 });
-
-const defaultValue = '';
 
 io.on('connection', socket => {
   socket.on('get-document', async documentId => {
@@ -55,3 +53,5 @@ const findOrCreateDocument = async id => {
   if (document) return document;
   return await Document.create({ _id: id, data: defaultValue });
 };
+
+connectToDb();
