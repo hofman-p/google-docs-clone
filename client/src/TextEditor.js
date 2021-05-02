@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { useParams } from 'react-router-dom';
 import ReactQuill from 'react-quill';
 import 'react-quill/dist/quill.snow.css';
 import { io } from 'socket.io-client';
@@ -16,8 +17,10 @@ const TOOLBAR_MODULES = [
 ];
 
 export default function TextEditor() {
-  const [text, setText] = useState('');
+  const [text, setText] = useState('Loading...');
   const [socket, setSocket] = useState();
+  const [readOnly, setReadOnly] = useState(true);
+  const { id: documentId } = useParams();
   const quillRef = useRef();
 
   useEffect(() => {
@@ -30,6 +33,15 @@ export default function TextEditor() {
 
   useEffect(() => {
     if (socket == null) return;
+    socket.once('load-document', document => {
+      setText(document);
+      setReadOnly(false);
+    });
+    socket.emit('get-document', documentId);
+  }, [socket, documentId]);
+
+  useEffect(() => {
+    if (socket == null) return;
     const handler = delta => {
       quillRef.current.getEditor().updateContents(delta);
     }
@@ -39,7 +51,6 @@ export default function TextEditor() {
     }
   }, [socket]);
 
-
   const handleChange = (changes, delta, source, editor) => {
     setText(changes);
     if (source !== 'user') return;
@@ -48,7 +59,7 @@ export default function TextEditor() {
 
   return (
     <div>
-      <ReactQuill ref={quillRef} value={text} onChange={handleChange} modules={ { toolbar: TOOLBAR_MODULES} }></ReactQuill>
+      <ReactQuill ref={quillRef} value={text} readOnly={readOnly} onChange={handleChange} modules={ { toolbar: TOOLBAR_MODULES} }></ReactQuill>
     </div>
   )
 }
