@@ -4,6 +4,8 @@ import ReactQuill from 'react-quill';
 import 'react-quill/dist/quill.snow.css';
 import { io } from 'socket.io-client';
 
+const SET_INTERVAL_MS = 2000;
+
 const TOOLBAR_MODULES = [
   [{ header: [1, 2, 3, 4, 5, 6, false] }],
   [{ font: [] }],
@@ -48,6 +50,16 @@ export default function TextEditor() {
     socket.on('received-delta', handler);
     return () => {
       socket.off('received-delta', handler);
+    }
+  }, [socket]);
+
+  useEffect(() => {
+    if (socket == null) return;
+    const interval = setInterval(() => {
+      socket.emit('save-document', quillRef.current.getEditor().getContents());
+    }, SET_INTERVAL_MS);
+    return () => {
+      clearInterval(interval);
     }
   }, [socket]);
 
